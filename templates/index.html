@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI-Powered Task Management System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        header {
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            color: white;
+            padding: 20px 40px;
+            text-align: center;
+        }
+
+        main {
+            max-width: 900px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        h1, h2 {
+            text-align: center;
+        }
+
+        .upload-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        input[type="file"] {
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        button {
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+
+        #output {
+            margin-top: 30px;
+        }
+
+        .accuracy {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .accuracy-card {
+            background: #f0f4ff;
+            padding: 20px;
+            border-radius: 10px;
+            width: 40%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+            font-size: 14px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        #loading {
+            display: none;
+            text-align: center;
+            font-weight: bold;
+            color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🤖 AI-Powered Task Management System</h1>
+    <p>Priority Prediction | Forecasting | Workload Balancing | Accuracy Dashboard</p>
+</header>
+
+<main>
+    <div class="upload-section">
+        <h2>Step 1: Upload Dataset (CSV)</h2>
+        <input type="file" id="fileInput" accept=".csv">
+        <button onclick="uploadFile()">Upload</button>
+        <p id="uploadStatus"></p>
+    </div>
+
+    <div class="train-section">
+        <h2>Step 2: Train the AI Model</h2>
+        <button onclick="trainModel()">🚀 Start Training</button>
+        <p id="loading">Training in progress... please wait ⏳</p>
+    </div>
+
+    <div id="output">
+        <div class="accuracy">
+            <div class="accuracy-card">
+                <h3>Status Model Accuracy</h3>
+                <p id="statusAccuracy">--%</p>
+            </div>
+            <div class="accuracy-card">
+                <h3>Priority Model Accuracy</h3>
+                <p id="priorityAccuracy">--%</p>
+            </div>
+        </div>
+
+        <h2>📊 Workload Balancing Report</h2>
+        <table id="workloadTable">
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Current Load</th>
+                    <th>Predicted Future Load</th>
+                    <th>Total Expected Load</th>
+                    <th>Balance Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</main>
+
+<script>
+async function uploadFile() {
+    const fileInput = document.getElementById('fileInput');
+    const statusText = document.getElementById('uploadStatus');
+
+    if (!fileInput.files.length) {
+        alert("Please select a CSV file first!");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    statusText.textContent = "Uploading...";
+    try {
+        const response = await fetch('/upload', { method: 'POST', body: formData });
+        const result = await response.json();
+
+        if (result.error) throw new Error(result.error);
+        statusText.textContent = `✅ File uploaded successfully (${result.rows} rows loaded)`;
+    } catch (err) {
+        statusText.textContent = `❌ Upload failed: ${err.message}`;
+    }
+}
+
+
+async function trainModel() {
+    const loadingText = document.getElementById('loading');
+    const statusAcc = document.getElementById('statusAccuracy');
+    const priorityAcc = document.getElementById('priorityAccuracy');
+    const tableBody = document.querySelector('#workloadTable tbody');
+
+    loadingText.style.display = 'block';
+    tableBody.innerHTML = '';
+    statusAcc.textContent = '--%';
+    priorityAcc.textContent = '--%';
+
+    try {
+        const response = await fetch('/train', { method: 'POST' });
+        const result = await response.json();
+
+        loadingText.style.display = 'none';
+
+        if (result.error) throw new Error(result.error);
+
+        // Display accuracy
+        statusAcc.textContent = result.status_accuracy + '%';
+        priorityAcc.textContent = result.priority_accuracy + '%';
+
+        // Populate workload table
+        result.workload.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.user_id}</td>
+                <td>${row.current_load}</td>
+                <td>${row.predicted_future_load}</td>
+                <td>${row.total_expected_load}</td>
+                <td><b>${row.balance_action}</b></td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+    } catch (err) {
+        loadingText.style.display = 'none';
+        alert(`Training failed: ${err.message}`);
+    }
+}
+</script>
+
+</body>
+</html>
